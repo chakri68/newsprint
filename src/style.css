@@ -1,0 +1,531 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   newsprint — "Amber Phosphor Terminal"
+
+   One accent colour, monospace everywhere, near-black surfaces, glow instead of
+   shadow. The chrome stays deliberately colourless so the only chromatic thing
+   on screen besides the amber is the artwork itself.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Surfaces (darkest → lightest) */
+  --bg: #000000;
+  --panel-2: #000;
+  --panel: #0b0b0a;
+
+  /* Lines & text */
+  --border: #2b2925;
+  --text: #ece7da;
+  --muted: #8b8574;
+
+  /* Accent — the ONLY chromatic colour */
+  --accent: #ffb000;
+  --accent-dim: #cc8a00;
+  --warn: #ff6a2b;
+
+  --font-pixel: "Press Start 2P", ui-monospace, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Thin themed scrollbars — inset thumb, no stepper arrows. Standard
+   scrollbar-* props are scoped to Firefox: the moment Chromium sees either one
+   it switches to the OS scrollbar model and ignores every ::-webkit rule. */
+*::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+*::-webkit-scrollbar-track {
+  margin: 8px 0;
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: #3a362e;
+  border-radius: 999px;
+  border: 4px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 176, 0, 0.45);
+  background-clip: padding-box;
+}
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #3a362e transparent;
+  }
+}
+
+/* ── Boot screen ───────────────────────────────────────────────────────── */
+/* Type has to be measured before anything can be laid out, and a canvas
+   measured against a fallback silently lies -- so the app genuinely cannot
+   draw until the faces land. This covers that wait rather than hiding it. */
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  transition: opacity 0.4s ease-out;
+}
+
+.intro.done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.intro.gone {
+  display: none;
+}
+
+.intro-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.intro-title {
+  font-family: var(--font-pixel);
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  color: var(--accent);
+  text-shadow: 0 0 14px rgba(255, 176, 0, 0.5);
+  animation: intro-glow 1.9s ease-in-out infinite alternate;
+}
+
+@keyframes intro-glow {
+  from {
+    text-shadow: 0 0 10px rgba(255, 176, 0, 0.35);
+  }
+  to {
+    text-shadow: 0 0 22px rgba(255, 176, 0, 0.7);
+  }
+}
+
+.intro-sub {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.intro-bar {
+  width: min(260px, 60vw);
+  height: 3px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.intro-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(255, 176, 0, 0.6);
+  transition: width 0.2s ease-out;
+}
+
+.intro-note {
+  font-size: 11px;
+  color: #4f4a40;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-title {
+    animation: none;
+  }
+}
+
+/* ── Top bar ───────────────────────────────────────────────────────────── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex: 0 0 auto;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  letter-spacing: -0.5px;
+  color: var(--accent);
+  text-shadow: 0 0 14px rgba(255, 176, 0, 0.5);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.readout {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.btn {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--accent-dim);
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+  font-weight: 600;
+}
+.btn.primary:hover:not(:disabled) {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+}
+
+/* ── Body split: screen + panel ────────────────────────────────────────── */
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.stage {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.screen {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  margin: 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.screen canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.hint.hidden {
+  display: none;
+}
+
+/* ── Text input bar ────────────────────────────────────────────────────── */
+
+.composer {
+  flex: 0 0 auto;
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.composer label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.composer label::before {
+  content: ">";
+  color: var(--accent);
+  margin-right: 6px;
+}
+
+.composer textarea {
+  width: 100%;
+  resize: none;
+  min-height: 62px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.45;
+  transition: border-color 0.12s;
+}
+.composer textarea:focus {
+  border-color: var(--accent);
+}
+
+/* ── Right panel ───────────────────────────────────────────────────────── */
+
+.panel {
+  flex: 0 0 320px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 14px 14px 40px;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+}
+
+.g-group {
+  margin-bottom: 18px;
+}
+
+.g-group h2 {
+  margin: 0 0 9px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 500;
+}
+.g-group h2::before {
+  content: ">";
+  color: var(--accent);
+  margin-right: 6px;
+}
+
+.g-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 9px;
+}
+
+.g-row.inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.g-row label,
+.g-chips-label {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.g-val {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
+
+.g-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  height: 18px;
+  cursor: pointer;
+}
+
+.g-row input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.g-row select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Rows whose governing toggle is off. */
+[data-requires].off {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.g-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.g-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 3px 9px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+.chip:hover {
+  color: var(--text);
+  border-color: var(--accent-dim);
+}
+.chip.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.g-note {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+.g-seed {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.g-seed input {
+  flex: 1;
+  min-width: 0;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.g-seed input:focus {
+  border-color: var(--accent);
+}
+
+.foot {
+  color: var(--muted);
+  font-size: 11px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.foot a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.foot a:hover {
+  color: var(--accent);
+}
+
+/* ── Mobile ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 780px) {
+  .body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .stage {
+    flex: 0 0 auto;
+  }
+  .screen {
+    height: 52vh;
+  }
+  .panel {
+    flex: 0 0 auto;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

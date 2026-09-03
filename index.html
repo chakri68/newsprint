@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>newsprint — type something, cut it out of a newspaper</title>
+    <meta
+      name="description"
+      content="Turn a sentence into newspaper clippings. Every word is cut from its own procedurally printed scrap of newsprint — type, paper, ink and tear all generated in the browser. No images in, no uploads out."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- UI chrome. Pixel font is display=block: it must never flash a fallback,
+         because the fallback's metrics shift the whole title. -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Critical CSS for the boot screen only.
+         The app itself is masked until its stylesheet has applied (Vite injects
+         CSS via JS in dev, so there is a real flash to kill) -- but masking the
+         whole body, as this used to, hid the boot screen behind it and left the
+         page pure black for as long as the fonts took. So the mask covers #app
+         and the boot screen is styled inline, which means it paints on the very
+         first frame with nothing loaded but this file. -->
+    <style>
+      html {
+        background: #000;
+      }
+      body {
+        margin: 0;
+      }
+      #app {
+        visibility: hidden;
+      }
+      body.booted #app {
+        visibility: visible;
+      }
+      .intro {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: grid;
+        place-items: center;
+        background: #000;
+        color: #8b8574;
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .intro-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 0 24px;
+        text-align: center;
+      }
+      .intro-title {
+        font-family: "Press Start 2P", ui-monospace, monospace;
+        font-size: 22px;
+        letter-spacing: -0.5px;
+        color: #ffb000;
+        text-shadow: 0 0 14px rgba(255, 176, 0, 0.5);
+      }
+      .intro-sub {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+      }
+      .intro-bar {
+        width: min(260px, 60vw);
+        height: 3px;
+        background: #2b2925;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .intro-fill {
+        height: 100%;
+        width: 0%;
+        background: #ffb000;
+      }
+      .intro-note {
+        font-size: 11px;
+        color: #4f4a40;
+      }
+    </style>
+    <noscript
+      ><style>
+        #app {
+          visibility: visible;
+        }
+        .intro {
+          display: none;
+        }
+      </style></noscript
+    >
+  </head>
+  <body>
+    <!-- Boot screen. In the markup rather than injected by JS so it is on
+         screen from the first paint, before the bundle has even parsed. -->
+    <div class="intro" id="intro">
+      <div class="intro-inner">
+        <div class="intro-title">newsprint</div>
+        <div class="intro-sub" id="intro-sub">setting type</div>
+        <div class="intro-bar"><div class="intro-fill" id="intro-fill"></div></div>
+        <div class="intro-note">nine faces, then nothing leaves your browser</div>
+      </div>
+    </div>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
