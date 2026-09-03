@@ -178,10 +178,16 @@ body {
 
 /* ── Top bar ───────────────────────────────────────────────────────────── */
 
+/* The body does not scroll, so anything too wide for the top bar is not pushed
+   behind a scrollbar -- it is amputated. On a 375px phone that used to take
+   Randomize, Copy and Save off the edge entirely, leaving no way to export.
+   Hence: wrap rather than clip, and shed the diagnostics before the controls. */
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  row-gap: 8px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
@@ -206,6 +212,10 @@ body {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  /* Allowed to shrink and ellipsise; it is the first thing to go. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .btn {
@@ -279,6 +289,7 @@ body {
   left: 50%;
   bottom: 10px;
   transform: translateX(-50%);
+  max-width: calc(100% - 24px);
   font-size: 11px;
   color: var(--muted);
   background: rgba(0, 0, 0, 0.6);
@@ -286,7 +297,18 @@ body {
   border-radius: 999px;
   padding: 3px 10px;
   pointer-events: none;
+  text-align: center;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Scroll-to-zoom is not a gesture that exists on touch, and the label was wide
+   enough to run off the screen while being wrong. */
+@media (pointer: coarse) {
+  .hint {
+    display: none;
+  }
 }
 
 .hint.hidden {
@@ -520,6 +542,30 @@ body {
     flex: 0 0 auto;
     border-left: none;
     border-top: 1px solid var(--border);
+  }
+}
+
+/* Diagnostics go first: page size and seed are both in the panel anyway, and
+   piece count is not worth an unreachable Save button. */
+@media (max-width: 700px) {
+  .readout {
+    display: none;
+  }
+}
+
+/* Then the controls tighten. Below this the row wraps rather than clipping,
+   which is why nothing here has to be pixel-perfect. */
+@media (max-width: 420px) {
+  .topbar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .topbar h1 {
+    font-size: 11px;
+  }
+  .btn {
+    padding: 6px 8px;
+    font-size: 12px;
   }
 }
 
