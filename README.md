@@ -63,14 +63,21 @@ renderer takes a scale. the preview renders at one scale, export at another, and
 neither knows about the other. that's why export is a genuine re-render and not
 the preview stretched — the type is redrawn at 4860px, not upscaled to it.
 
-**grain is fixed in page space, and this is the one thing you cannot get wrong.**
-paper texture is always generated at page resolution and upscaled at draw time.
-index the noise per device pixel instead and your 3× export gets grain three
-times finer — invisible — so the preview looks like paper and the export comes
-back clean and plasticky. measured: adjacent-pixel delta drops by 3.07× across a
-3× render, which is the invariant holding. ink damage does the opposite and
-scales with the type, because a fleck of missing ink is part of the printing, not
-part of the paper.
+**paper texture splits by frequency, and the two halves scale differently.** each
+scrap's texture is generated at the scale that scrap is being rasterised at. the
+*structural* bands — blotching, mottling, edge dirt, fibres, specks — are sampled
+in page space, so they keep their size on the sheet however big the export gets;
+index those per device pixel and they shrink away to nothing. the finest *tooth*
+is sampled in texture space, so it always lands about one grain cell per output
+pixel. pin that to page space instead and a 4× export smears every grain texel
+across 4×4 output pixels — flat cream paper under razor-sharp type, which is the
+plasticky look arrived at from the other direction. paper photographed closer
+shows finer tooth, not blurrier tooth. ink damage scales with the type, because a
+fleck of missing ink is part of the printing, not part of the paper.
+
+this is what makes the download look like the viewport instead of a suspiciously
+clean version of it. it costs: a 4× export is ~0.9s of blocking work, so Save
+paints a pending state before it starts.
 
 **three passes, cached by how expensive they are to redo.** plan every scrap
 (pick a face, measure it, tear an outline — pure arithmetic), lay them out (also

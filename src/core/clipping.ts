@@ -121,6 +121,9 @@ export function planClippings(
 /** Page units of margin around each scrap, holding its baked drop shadow. */
 export const SHADOW_PAD = 7;
 
+/** Ceiling on texture pixels per page unit. See the note in `rasterize`. */
+const TEXTURE_DETAIL_CAP = 4;
+
 export interface Raster {
   canvas: HTMLCanvasElement;
   /** Page-unit extent of the canvas, shadow margin included. */
@@ -183,14 +186,18 @@ export function rasterize(
   tracePath(ctx, plan.path);
   ctx.clip();
 
-  // Paper. Generated at page resolution and upscaled by the transform — see
-  // paper.ts for why grain must never be indexed per device pixel.
+  // Paper. The texture is generated at the scrap's own raster scale so the fine
+  // tooth lands on output pixels 1:1 instead of being stretched — see paper.ts
+  // for which bands scale and which stay fixed to the sheet. Capped because the
+  // cost is quadratic in the scale and the tooth stops being visible long
+  // before a 4x export stops being expensive.
   const texture = paperTexture(
     pageWidth,
     pageHeight,
     settings,
     seed ^ (plan.token.index * 0x9e3779b9),
     rng,
+    Math.min(scale, TEXTURE_DETAIL_CAP),
   );
   ctx.drawImage(texture, 0, 0, pageWidth, pageHeight);
 

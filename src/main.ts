@@ -182,10 +182,18 @@ function blit(): void {
   const y = (canvas.height - h) / 2 + panY;
 
   // The artwork sits on the terminal's black. A hairline keeps its own edge
-  // legible when the ground is white or transparent.
+  // legible when the ground is white or transparent -- and it has to follow the
+  // corner radius, or a rounded page gets a square box drawn around it.
+  const radius = Math.min(w, h) * Math.min(0.5, settings.cornerRadius);
   ctx.strokeStyle = "rgba(255,176,0,0.22)";
   ctx.lineWidth = 1;
-  ctx.strokeRect(x - 0.5, y - 0.5, w + 1, h + 1);
+  ctx.beginPath();
+  if (radius > 0.5 && typeof ctx.roundRect === "function") {
+    ctx.roundRect(x - 0.5, y - 0.5, w + 1, h + 1, radius);
+  } else {
+    ctx.rect(x - 0.5, y - 0.5, w + 1, h + 1);
+  }
+  ctx.stroke();
   ctx.drawImage(page, x, y, w, h);
 }
 
@@ -363,6 +371,9 @@ panel.innerHTML = `
       ["black", "Black"],
       ["transparent", "None"],
     ])}
+    ${slider("cornerRadius", "corners", 0, 0.25, 0.005, settings.cornerRadius, "")}
+    <small class="g-note">Rounds the artwork itself, not the preview &mdash; the corners
+    are cut out of the exported PNG, so they stay transparent whatever the ground is.</small>
   </div>
 
   <div class="g-group">
@@ -598,37 +609,63 @@ syncPresetHighlight();
 copyBtn.addEventListener("click", () => void exportImage("copy"));
 saveBtn.addEventListener("click", () => void exportImage("save"));
 
+let exporting = false;
+
 async function exportImage(mode: "copy" | "save"): Promise<void> {
+  if (exporting) return;
+  exporting = true;
+
+  const button = mode === "copy" ? copyBtn : saveBtn;
+  const label = button.textContent;
   const { width, height } = pageSize();
-  const out = document.createElement("canvas");
-  // Same renderer, same settings, same seed -- only the scale differs. A fresh
-  // cache, because these rasters are export-sized and would evict the preview's
-  // for no benefit.
-  renderPage(out, {
-    text,
-    settings,
-    seed,
-    pageWidth: width,
-    pageHeight: height,
-    scale: exportScale,
-    cache: createCache(),
-  });
 
-  const blob = await new Promise<Blob | null>((resolve) =>
-    out.toBlob(resolve, "image/png"),
-  );
-  if (!blob) return;
+  // A 4x export renders paper tooth at four texture pixels per page unit, which
+  // is most of a second of blocking main-thread work. Paint the pending state
+  // and let two frames land before starting, or the button never visibly
+  // changes and the tab just freezes.
+  button.textContent = "Rendering…";
+  copyBtn.disabled = true;
+  saveBtn.disabled = true;
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-  if (mode === "copy") {
-    try {
-      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      flash(copyBtn, "Copied");
-    } catch {
-      flash(copyBtn, "Blocked");
+  try {
+    const out = document.createElement("canvas");
+    // Same renderer, same settings, same seed -- only the scale differs. A fresh
+    // cache, because these rasters are export-sized and would evict the
+    // preview's for no benefit.
+    renderPage(out, {
+      text,
+      settings,
+      seed,
+      pageWidth: width,
+      pageHeight: height,
+      scale: exportScale,
+      cache: createCache(),
+    });
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      out.toBlob(resolve, "image/png"),
+    );
+    if (!blob) return;
+
+    if (mode === "copy") {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        flash(copyBtn, "Copied");
+      } catch {
+        flash(copyBtn, "Blocked");
+      }
+      return;
     }
-    return;
+    downloadBlob(blob, suggestFilename(text, "png"));
+  } finally {
+    exporting = false;
+    copyBtn.disabled = false;
+    saveBtn.disabled = false;
+    // `flash` has already swapped in its own label on the copy path; only
+    // restore the button that is still showing "Rendering…".
+    if (button.textContent === "Rendering…") button.textContent = label;
   }
-  downloadBlob(blob, suggestFilename(text, "png"));
 }
 
 function flash(button: HTMLButtonElement, label: string): void {

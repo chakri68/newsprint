@@ -134,11 +134,49 @@ export function renderPage(
     applyPhotocopy(ctx, deviceWidth, deviceHeight, settings, seed, scale);
   }
 
+  roundCorners(ctx, deviceWidth, deviceHeight, settings.cornerRadius);
+
   return {
     pieces: composition.placements.length,
     rasterScale,
     milliseconds: performance.now() - started,
   };
+}
+
+/**
+ * Punch the corners out of the finished page.
+ *
+ * Done last, as a `destination-in` mask, rather than as a clip set up front:
+ * the photocopy pass writes the whole canvas back with `putImageData`, which
+ * ignores clipping regions entirely and would refill any corner a clip had
+ * already cut. Masking at the end is immune to that and costs one fill.
+ */
+function roundCorners(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  fraction: number,
+): void {
+  if (fraction <= 0.001) return;
+  const radius = Math.min(width, height) * Math.min(0.5, fraction);
+
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.fillStyle = "#000";
+  ctx.beginPath();
+  if (typeof ctx.roundRect === "function") {
+    ctx.roundRect(0, 0, width, height, radius);
+  } else {
+    // Older Safari. arcTo draws the same shape from the corner points.
+    ctx.moveTo(radius, 0);
+    ctx.arcTo(width, 0, width, height, radius);
+    ctx.arcTo(width, height, 0, height, radius);
+    ctx.arcTo(0, height, 0, 0, radius);
+    ctx.arcTo(0, 0, width, 0, radius);
+    ctx.closePath();
+  }
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawBackground(

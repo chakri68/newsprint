@@ -1,12 +1,21 @@
 /**
  * Procedural newsprint. No scans, no image assets — every scrap makes its own.
  *
- * The texture is always generated at *page* resolution and upscaled at draw
- * time, never regenerated per device pixel. That is deliberate and it is the
- * one thing you cannot get wrong: grain has an apparent size on the page. Index
- * the noise by device pixel instead and a 4x export gets grain four times finer
- * — which is to say invisible, and the export comes back clean and plasticky
- * while the preview looked right. Fixed in page space, it survives any scale.
+ * Texture detail is split by frequency band, and the two halves scale
+ * differently. Getting this wrong ruins the export in one direction or the
+ * other.
+ *
+ * The *structural* bands — blotching, mottling, edge dirt, fibres, specks —
+ * are sampled in page space. They have an apparent size on the sheet, and
+ * indexing them per device pixel would shrink them as the export grew until
+ * they vanished.
+ *
+ * The *tooth* — the finest per-pixel grain — is sampled in texture space, at
+ * whatever resolution the scrap is being rasterised at. Pinning it to page
+ * space instead (as this used to) meant a 4x export smeared every grain texel
+ * across 4x4 output pixels: the paper came out flat cream under razor-sharp
+ * type, which is the plasticky result arrived at from the other side. Paper
+ * that is photographed closer shows finer tooth, not blurrier tooth.
  *
  * Structure, cheapest first: base tint, blotching and grain go in one pass over
  * the ImageData; fibres and specks are a handful of canvas ops on top, because
@@ -74,15 +83,25 @@ function bilinear(grid: Grid, x: number, y: number): number {
   return (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
 }
 
+/**
+ * @param detailScale Texture pixels per page unit. Pass the scale the scrap is
+ * being rasterised at so the tooth lands 1:1 on output pixels; 1 keeps the old
+ * page-resolution behaviour.
+ */
 export function paperTexture(
   width: number,
   height: number,
   settings: Settings,
   seed: number,
   rng: Rng,
+  detailScale = 1,
 ): HTMLCanvasElement {
-  const w = Math.max(1, Math.round(width));
-  const h = Math.max(1, Math.round(height));
+  const detail = Math.max(0.25, detailScale);
+  // Page-unit extent, and the pixel grid it is sampled on.
+  const pageW = Math.max(1, width);
+  const pageH = Math.max(1, height);
+  const w = Math.max(1, Math.round(pageW * detail));
+  const h = Math.max(1, Math.round(pageH * detail));
 
   const canvas = document.createElement("canvas");
   canvas.width = w;
@@ -102,11 +121,14 @@ export function paperTexture(
   const fineScale = 1 / 7;
   const grain = settings.paperGrain;
 
-  const blotch = sampleGrid(w, h, BLOTCH_STEP, (x, y) =>
-    noise.fbm(x * blotchScale, y * blotchScale, 3),
+  // The grids are indexed in texture pixels but their step is a page-unit
+  // distance, so the features they carry keep the same size on the sheet
+  // however finely the scrap is being rasterised.
+  const blotch = sampleGrid(w, h, BLOTCH_STEP * detail, (x, y) =>
+    noise.fbm((x / detail) * blotchScale, (y / detail) * blotchScale, 3),
   );
-  const mottle = sampleGrid(w, h, MOTTLE_STEP, (x, y) =>
-    noise.at(x * fineScale, y * fineScale),
+  const mottle = sampleGrid(w, h, MOTTLE_STEP * detail, (x, y) =>
+    noise.at((x / detail) * fineScale, (y / detail) * fineScale),
   );
 
   const mottleGain = 16 * (0.4 + grain);
@@ -151,8 +173,12 @@ export function paperTexture(
   }
   ctx.putImageData(image, 0, 0);
 
-  drawFibres(ctx, w, h, grain, rng);
-  drawSpecks(ctx, w, h, age, rng);
+  // Fibres and specks are physical objects on the sheet, so they are drawn in
+  // page units and scale with the texture rather than multiplying with it.
+  ctx.setTransform(detail, 0, 0, detail, 0, 0);
+  drawFibres(ctx, pageW, pageH, grain, rng);
+  drawSpecks(ctx, pageW, pageH, age, rng);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
 
   return canvas;
 }

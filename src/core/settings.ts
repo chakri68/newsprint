@@ -54,6 +54,8 @@ export interface Settings {
   // Global finishing pass.
   photocopy: number;
   background: Background;
+  /** Corner rounding, as a fraction of the page's shorter side. 0 is square. */
+  cornerRadius: number;
 }
 
 export const DEFAULTS: Settings = {
@@ -89,6 +91,7 @@ export const DEFAULTS: Settings = {
 
   photocopy: 0,
   background: "board",
+  cornerRadius: 0,
 };
 
 export type PresetName =
