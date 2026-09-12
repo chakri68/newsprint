@@ -6,28 +6,16 @@
    on screen besides the amber is the artwork itself.
    ────────────────────────────────────────────────────────────────────────── */
 
+/* The 12 shared tokens (--bg --panel-2 --panel --border --text --muted --accent
+   --accent-dim --warn --danger --font-pixel --font-mono, plus color-scheme) come
+   from theme.chakri.me/tokens.css, linked in index.html. Never redefine them
+   here — that shadows the source and drifts. newsprint adds no tokens of its
+   own; only the base document styling that consumes them lives below. The
+   literal colours that remain are in index.html's inline critical CSS, which
+   has to paint the boot screen before any stylesheet exists. */
 :root {
-  /* Surfaces (darkest → lightest) */
-  --bg: #000000;
-  --panel-2: #000;
-  --panel: #0b0b0a;
-
-  /* Lines & text */
-  --border: #2b2925;
-  --text: #ece7da;
-  --muted: #8b8574;
-
-  /* Accent — the ONLY chromatic colour */
-  --accent: #ffb000;
-  --accent-dim: #cc8a00;
-  --warn: #ff6a2b;
-
-  --font-pixel: "Press Start 2P", ui-monospace, monospace;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-
   font-family: var(--font-mono);
   font-size: 13px;
-  color-scheme: dark;
 }
 
 * {
