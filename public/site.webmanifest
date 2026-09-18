@@ -1,7 +1,7 @@
 {
   "name": "newsprint",
   "short_name": "newsprint",
-  "description": "Type a sentence, get it back cut out of a newspaper. Every word becomes its own procedurally printed scrap of newsprint — type, paper, ink and tear all generated in your browser.",
+  "description": "Type a sentence, get it back cut out of a newspaper. Every word becomes its own procedurally printed scrap of newsprint: type, paper, ink and tear all generated in your browser.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
